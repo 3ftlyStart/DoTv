@@ -12,6 +12,8 @@ import Features from './components/Features';
 import DoDrop from './components/DoDrop';
 import Footer from './components/Footer';
 import MovieDetails from './components/MovieDetails';
+import SettingsModal from './components/SettingsModal';
+import GlobalLoading from './components/GlobalLoading';
 import { RECOMMENDATIONS } from './constants';
 import { useWatchlist } from './lib/useWatchlist';
 import { useHistory } from './lib/useHistory';
@@ -20,7 +22,7 @@ import { getPersonalizedRecommendations } from './lib/recommendationEngine';
 
 import SearchOverlay from './components/SearchOverlay';
 import VideoPlayer from './components/VideoPlayer';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 export default function App() {
   const profileId = 'default';
@@ -30,11 +32,32 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<any | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPiP, setIsPiP] = useState(false);
+
+  // Simulate initial data fetching
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handlePlayContent = (item: any) => {
     setActiveVideo(item);
+    setIsPiP(false);
     addToHistory(item);
     setSelectedMovie(null); // Close details when playing
+  };
+
+  const handleTogglePiP = (enabled: boolean) => {
+    setIsPiP(enabled);
+  };
+
+  const handleCloseVideo = () => {
+    setActiveVideo(null);
+    setIsPiP(false);
   };
 
   const handleContentClick = (item: any) => {
@@ -67,9 +90,13 @@ export default function App() {
   }, [activeVideo, history, personalizedRecommendations]);
 
   return (
-    <div className="min-h-screen bg-[#050505]">
+    <div className="min-h-screen bg-cyber-bg relative overflow-x-hidden">
+      <div className="scanline" />
+      <GlobalLoading isLoading={isLoading} />
+      
       <Navbar 
         onSearch={() => setIsSearchOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
       
       <SearchOverlay 
@@ -80,11 +107,13 @@ export default function App() {
 
       <VideoPlayer
         isOpen={!!activeVideo}
-        onClose={() => setActiveVideo(null)}
+        onClose={handleCloseVideo}
         videoTitle={activeVideo?.title}
         videoUrl={activeVideo?.videoUrl}
         nextItem={nextItem}
         onPlayNext={handlePlayContent}
+        isPiP={isPiP}
+        onTogglePiP={handleTogglePiP}
       />
 
       <MovieDetails 
@@ -92,7 +121,13 @@ export default function App() {
         isOpen={!!selectedMovie}
         onClose={() => setSelectedMovie(null)}
         onPlay={handlePlayContent}
+        onSelectMovie={handleContentClick}
         profileId={profileId}
+      />
+
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
       
       <main>

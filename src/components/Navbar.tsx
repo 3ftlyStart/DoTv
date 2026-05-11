@@ -1,5 +1,5 @@
 import { motion, useScroll, useMotionValueEvent } from 'motion/react';
-import { Search } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import { NAV_LINKS } from '../constants';
 import { useState } from 'react';
 import { cn } from '../lib/utils';
@@ -7,9 +7,10 @@ import Logo from './Logo';
 
 interface NavbarProps {
   onSearch: () => void;
+  onOpenSettings: () => void;
 }
 
-export default function Navbar({ onSearch }: NavbarProps) {
+export default function Navbar({ onSearch, onOpenSettings }: NavbarProps) {
   const { scrollY } = useScroll();
   const [hidden, setHidden] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -41,9 +42,9 @@ export default function Navbar({ onSearch }: NavbarProps) {
         animate={hidden ? "hidden" : "visible"}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "flex items-center justify-between px-8 py-3 rounded-full border transition-all duration-500 w-full max-w-4xl",
+          "flex items-center justify-between px-8 py-3 transition-all duration-500 w-full max-w-4xl cyber-panel",
           scrolled 
-            ? "bg-black/80 backdrop-blur-2xl border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]" 
+            ? "bg-black/80 backdrop-blur-2xl border-cyber-cyan/30 shadow-[0_0_20px_rgba(0,255,255,0.2)]" 
             : "bg-white/5 backdrop-blur-xl border-white/5"
         )}
       >
@@ -71,6 +72,13 @@ export default function Navbar({ onSearch }: NavbarProps) {
             className="p-2 text-white/50 hover:text-white transition-all transform hover:scale-110"
           >
             <Search size={18} />
+          </button>
+
+          <button 
+            onClick={onOpenSettings}
+            className="p-2 text-white/50 hover:text-white transition-all transform hover:scale-110"
+          >
+            <Settings size={18} />
           </button>
           
           <button className="hidden sm:block px-6 py-2 rounded-full bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/20 transition-all">

@@ -14,6 +14,8 @@ interface VideoPlayerProps {
   videoUrl?: string;
   nextItem?: any;
   onPlayNext?: (item: any) => void;
+  isPiP?: boolean;
+  onTogglePiP?: (enabled: boolean) => void;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -28,7 +30,16 @@ const SAMPLE_SUBTITLES = [
   { start: 40, end: 45, text: "Let the story unfold before your eyes." },
 ];
 
-export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl, nextItem, onPlayNext }: VideoPlayerProps) {
+export default function VideoPlayer({ 
+  isOpen, 
+  onClose, 
+  videoTitle, 
+  videoUrl, 
+  nextItem, 
+  onPlayNext,
+  isPiP = false,
+  onTogglePiP
+}: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -255,19 +266,68 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl, nex
       {isOpen && (
         <motion.div
           ref={containerRef}
+          layout
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[500] bg-black flex items-center justify-center group/player"
+          className={cn(
+            "fixed z-[500] bg-black flex items-center justify-center group/player overflow-hidden",
+            isPiP 
+              ? "bottom-8 right-8 w-[320px] md:w-[400px] aspect-video rounded-3xl shadow-[0_32px_64px_rgba(0,0,0,0.8)] border border-white/10 ring-1 ring-white/5" 
+              : "inset-0"
+          )}
           onMouseMove={handleMouseMove}
         >
           <video
+            key={videoUrl || "default"}
             ref={videoRef}
-            src={videoUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"}
-            className="w-full h-full max-h-screen object-contain"
+            src={(videoUrl && videoUrl.length > 0) ? videoUrl : "https://vjs.zencdn.net/v/oceans.mp4"}
+            className="w-full h-full object-contain"
             onClick={togglePlay}
+            playsInline
             x-webkit-airplay="allow"
+            preload="metadata"
+            onError={(e) => {
+              const video = e.currentTarget;
+              console.error("Video Error:", {
+                code: video.error?.code,
+                message: video.error?.message,
+                src: video.src
+              });
+            }}
           />
+
+          {/* PiP Overlay Controls */}
+          {isPiP && (
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/player:opacity-100 transition-opacity flex flex-col justify-between p-4">
+              <div className="flex justify-between items-center">
+                 <button 
+                  onClick={() => onTogglePiP?.(false)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white backdrop-blur-md transition-all"
+                  title="Expand"
+                >
+                  <Maximize size={16} />
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="p-2 bg-black/40 hover:bg-red-500 rounded-full text-white backdrop-blur-md transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex justify-center gap-4">
+                 <button 
+                  onClick={togglePlay}
+                  className="w-10 h-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all"
+                >
+                  {isPlaying ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                </button>
+              </div>
+              <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
 
           {/* Subtitle Overlay */}
           <AnimatePresence>
@@ -337,8 +397,8 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl, nex
 
           {/* Controls Overlay */}
           <motion.div
-            animate={{ opacity: showControls && !isCountingDown ? 1 : 0 }}
-            className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 flex flex-col justify-between p-8"
+            animate={{ opacity: showControls && !isCountingDown && !isPiP ? 1 : 0 }}
+            className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 flex flex-col justify-between p-8 pointer-events-none group-hover/player:pointer-events-auto"
           >
             {/* Header */}
             <div className="flex justify-between items-center">
@@ -346,12 +406,22 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl, nex
                 <h3 className="text-xl font-bold font-display">{videoTitle || "Big Buck Bunny"}</h3>
                 <p className="text-xs text-white/40 uppercase tracking-widest font-black mt-1">Do Premium Stream</p>
               </div>
-              <button 
-                onClick={onClose}
-                className="p-4 bg-white/10 hover:bg-white/20 rounded-full transition-all"
-              >
-                <X size={24} />
-              </button>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => onTogglePiP?.(true)}
+                  className="p-3 bg-white/5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-all border border-white/5 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+                  title="Picture-in-Picture"
+                >
+                  <Minimize size={18} />
+                  <span className="hidden sm:inline">Minimize</span>
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="p-4 bg-white/10 hover:bg-white/20 rounded-full transition-all"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
 
             {/* Middle Big Buttons (Visible only when hovering or paused) */}

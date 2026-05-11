@@ -3,59 +3,50 @@ import { motion } from 'motion/react';
 export default function Logo({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-3 group ${className}`}>
-      <div className="relative w-10 h-10">
+      <div className="relative w-10 h-10 group">
         <svg
           viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full drop-shadow-[0_8px_16px_rgba(255,255,255,0.15)] transition-transform duration-500 group-hover:scale-110"
+          className="w-full h-full drop-shadow-[0_0_12px_rgba(0,255,255,0.4)] transition-transform duration-500 group-hover:scale-110"
         >
           <defs>
-            {/* 3D-effect gradient for the circle */}
-            <linearGradient id="circle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="100%" stopColor="#E5E5E5" />
+            <linearGradient id="cyber-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00ffff" />
+              <stop offset="100%" stopColor="#ff00ff" />
             </linearGradient>
             
-            {/* Subtle inner shadow for the play button cutout */}
-            <filter id="inner-shadow">
-              <feOffset dx="0" dy="2" />
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feComposite in="SourceAlpha" in2="blur" operator="arithmetic" k2="-1" k3="1" result="shadow" />
-              <feFlood floodColor="black" floodOpacity="0.2" />
-              <feComposite in2="shadow" operator="in" />
-              <feComposite in2="SourceGraphic" operator="over" />
+            <filter id="neon-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
 
-          {/* Clean circle base */}
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="48" 
-            fill="url(#circle-grad)" 
+          {/* Glitchy hexagonal base */}
+          <path 
+            d="M50 5 L90 27.5 V72.5 L50 95 L10 72.5 V27.5 Z" 
+            fill="black" 
+            stroke="url(#cyber-grad)" 
+            strokeWidth="3"
+            opacity="0.8"
           />
 
-          {/* Play button silhouette (cutout) */}
+          {/* Play button silhouette */}
           <path
             d="M68 50L41 66V34L68 50Z"
-            fill="#050505"
-            filter="url(#inner-shadow)"
+            fill="white"
+            filter="url(#neon-glow)"
+            className="animate-pulse"
           />
           
-          {/* Subtle highlight ring */}
-          <circle 
-            cx="50" 
-            cy="50" 
-            r="47.5" 
-            stroke="white" 
-            strokeOpacity="0.5" 
-            strokeWidth="1" 
-          />
+          {/* Scanning lines effect */}
+          <line x1="20" y1="40" x2="80" y2="40" stroke="cyan" strokeWidth="0.5" opacity="0.3" />
+          <line x1="20" y1="50" x2="80" y2="50" stroke="magenta" strokeWidth="0.5" opacity="0.3" />
+          <line x1="20" y1="60" x2="80" y2="60" stroke="cyan" strokeWidth="0.5" opacity="0.3" />
         </svg>
       </div>
-      <span className="font-sans font-black text-2xl tracking-tighter text-white group-hover:tracking-tight transition-all duration-500">
-        Do<span className="text-white/60">Tv</span>
+      <span className="font-display font-black text-2xl tracking-tighter text-white group-hover:tracking-widest transition-all duration-500 glitch-hover">
+        Do<span className="text-cyber-cyan">Tv</span>
       </span>
     </div>
   );

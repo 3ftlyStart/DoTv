@@ -2,18 +2,49 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Play, Plus, Check, Star, Clock, Calendar, Info, Share2, Volume2, ThumbsUp } from 'lucide-react';
 import { useWatchlist } from '../lib/useWatchlist';
 import { cn } from '../lib/utils';
+import { RECOMMENDATIONS, FEATURED_CONTENT } from '../constants';
+import { useMemo } from 'react';
 
 interface MovieDetailsProps {
   movie: any;
   isOpen: boolean;
   onClose: () => void;
   onPlay: (movie: any) => void;
+  onSelectMovie: (movie: any) => void;
   profileId: string;
 }
 
-export default function MovieDetails({ movie, isOpen, onClose, onPlay, profileId }: MovieDetailsProps) {
+export default function MovieDetails({ movie, isOpen, onClose, onPlay, onSelectMovie, profileId }: MovieDetailsProps) {
   const { toggleWatchlist, isInWatchlist } = useWatchlist(profileId);
   const inWatchlist = movie ? isInWatchlist(movie.id) : false;
+
+  const similarMovies = useMemo(() => {
+    if (!movie) return [];
+
+    const allContent = [...RECOMMENDATIONS, ...FEATURED_CONTENT];
+    const otherMovies = allContent.filter(item => item.id !== movie.id);
+
+    return otherMovies
+      .map(item => {
+        let score = 0;
+        
+        // Match Genre/Category
+        if (item.category === movie.category || item.genre === movie.genre) score += 5;
+        
+        // Match Director
+        if (item.director && movie.director && item.director === movie.director) score += 3;
+        
+        // Match Cast
+        if (item.cast && movie.cast) {
+          const commonCast = item.cast.filter((actor: string) => movie.cast.includes(actor));
+          score += commonCast.length * 2;
+        }
+
+        return { ...item, similarityScore: score };
+      })
+      .sort((a, b) => b.similarityScore - a.similarityScore)
+      .slice(0, 6);
+  }, [movie]);
 
   const handlePlayContent = (movie: any) => {
     onPlay(movie);
@@ -170,6 +201,31 @@ export default function MovieDetails({ movie, isOpen, onClose, onPlay, profileId
                          {movie.service}
                        </span>
                     </div>
+                  </div>
+                </div>
+
+                {/* More Like This Section */}
+                <div className="pt-12 border-t border-white/5">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-8">More Like This</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {similarMovies.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => onSelectMovie(item)}
+                        className="group relative aspect-[2/3] rounded-xl overflow-hidden bg-white/5 border border-white/5 transition-all hover:scale-105 active:scale-95"
+                      >
+                        <img 
+                          src={item.image} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover group-hover:opacity-50 transition-opacity"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 text-left">
+                          <h4 className="text-xs font-bold text-white line-clamp-2">{item.title}</h4>
+                          <p className="text-[9px] text-white/60 mt-1 uppercase font-black tracking-widest">{item.category || item.genre}</p>
+                        </div>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
