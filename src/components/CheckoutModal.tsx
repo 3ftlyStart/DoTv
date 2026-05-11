@@ -69,7 +69,7 @@ export default function CheckoutModal({ product, isOpen, onClose }: CheckoutModa
                     <span className="font-bold">{product.price}</span>
                   </div>
                   <div className="flex items-center justify-between py-4 border-t border-white/5">
-                    <span className="text-white/40">Ogle Drop Delivery</span>
+                    <span className="text-white/40">DoDrop Delivery</span>
                     <span className="text-emerald-500 font-bold">FREE</span>
                   </div>
                   <div className="flex items-center justify-between py-6 border-t border-white/10 mt-4">
@@ -132,7 +132,7 @@ export default function CheckoutModal({ product, isOpen, onClose }: CheckoutModa
                       </div>
                       <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 flex items-center gap-4 text-blue-400">
                         <Truck size={20} />
-                        <p className="text-sm">Ogle Drop ensures same-day dispatch for all orders placed before 4PM.</p>
+                        <p className="text-sm">DoDrop ensures same-day dispatch for all orders placed before 4PM.</p>
                       </div>
                     </motion.div>
                   )}

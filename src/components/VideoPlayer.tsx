@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Settings, RotateCcw, RotateCw, SkipForward,
-  FastForward, Music, Subtitles
+  FastForward, Music, Subtitles, Airplay
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -12,12 +12,14 @@ interface VideoPlayerProps {
   onClose: () => void;
   videoTitle?: string;
   videoUrl?: string;
+  nextItem?: any;
+  onPlayNext?: (item: any) => void;
 }
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 const SAMPLE_SUBTITLES = [
-  { start: 1, end: 5, text: "Ogle TV presents: A Cinematic Journey." },
+  { start: 1, end: 5, text: "DoTv presents: A Cinematic Journey." },
   { start: 6, end: 10, text: "In a world where technology and passion collide..." },
   { start: 11, end: 15, text: "One app brings all your favorite content into one place." },
   { start: 16, end: 20, text: "Experience the next generation of entertainment." },
@@ -26,7 +28,7 @@ const SAMPLE_SUBTITLES = [
   { start: 40, end: 45, text: "Let the story unfold before your eyes." },
 ];
 
-export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: VideoPlayerProps) {
+export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl, nextItem, onPlayNext }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -40,14 +42,20 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
   const [showControls, setShowControls] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isAirPlayAvailable, setIsAirPlayAvailable] = useState(false);
   
-  let controlsTimeout: NodeJS.Timeout;
+  // Auto-play state
+  const [isAutoPlayEnabled, setIsAutoPlayEnabled] = useState(true);
+  const [isCountingDown, setIsCountingDown] = useState(false);
+  const [countdown, setCountdown] = useState(10);
+  
+  const controlsTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseMove = () => {
     setShowControls(true);
-    clearTimeout(controlsTimeout);
-    controlsTimeout = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
+    if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
+    controlsTimeout.current = setTimeout(() => {
+      if (isPlaying && !isSettingsOpen && !isCountingDown) setShowControls(false);
     }, 3000);
   };
 
@@ -57,6 +65,7 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
       videoRef.current.pause();
     } else {
       videoRef.current.play();
+      setIsCountingDown(false);
     }
     setIsPlaying(!isPlaying);
   };
@@ -105,14 +114,41 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
     }
   };
 
+  const handleAirPlay = () => {
+    const video = videoRef.current;
+    if (video && (video as any).webkitShowPlaybackTargetPicker) {
+      (video as any).webkitShowPlaybackTargetPicker();
+    }
+  };
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    // AirPlay availability
+    const video = videoRef.current;
+    if (video && 'WebKitPlaybackTargetAvailabilityEvent' in window) {
+      const handleAvailabilityChange = (event: any) => {
+        if (event.availability === 'available') {
+          setIsAirPlayAvailable(true);
+        } else {
+          setIsAirPlayAvailable(false);
+        }
+      };
+
+      video.addEventListener('webkitplaybacktargetavailabilitychanged', handleAvailabilityChange);
+      
+      return () => {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        video.removeEventListener('webkitplaybacktargetavailabilitychanged', handleAvailabilityChange);
+      };
+    }
+
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+  }, [isOpen]);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -143,17 +179,44 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
       setDuration(video.duration);
     };
 
+    const handleEnded = () => {
+      setIsPlaying(false);
+      if (isAutoPlayEnabled && nextItem) {
+        setIsCountingDown(true);
+        setCountdown(10);
+      }
+    };
+
     video.addEventListener('timeupdate', updateProgress);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('ended', handleEnded);
 
     return () => {
       video.removeEventListener('timeupdate', updateProgress);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('ended', handleEnded);
     };
-  }, [showSubtitles]);
+  }, [showSubtitles, isAutoPlayEnabled, nextItem]);
+
+  // Countdown timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isCountingDown && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else if (isCountingDown && countdown === 0) {
+      onPlayNext?.(nextItem);
+      setIsCountingDown(false);
+    }
+    return () => clearInterval(timer);
+  }, [isCountingDown, countdown, nextItem, onPlayNext]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      setIsCountingDown(false);
+      return;
+    }
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -185,7 +248,7 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isPlaying, isMuted]);
+  }, [isOpen, isPlaying, isMuted, isCountingDown]);
 
   return (
     <AnimatePresence>
@@ -203,6 +266,7 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
             src={videoUrl || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"}
             className="w-full h-full max-h-screen object-contain"
             onClick={togglePlay}
+            x-webkit-airplay="allow"
           />
 
           {/* Subtitle Overlay */}
@@ -223,16 +287,64 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
             )}
           </AnimatePresence>
 
+          {/* Up Next Overlay */}
+          <AnimatePresence>
+            {isCountingDown && nextItem && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-xl z-[480] flex flex-col items-center justify-center text-center p-8"
+              >
+                <div className="max-w-md w-full space-y-8">
+                  <div className="space-y-2">
+                    <p className="text-blue-400 font-black uppercase tracking-widest text-xs">Up Next in {countdown}s</p>
+                    <h2 className="text-4xl font-bold font-display">{nextItem.title}</h2>
+                    <p className="text-white/60 text-sm line-clamp-2">{nextItem.description}</p>
+                  </div>
+
+                  <div className="relative w-64 aspect-video mx-auto rounded-2xl overflow-hidden group/next shadow-2xl">
+                    <img 
+                      src={nextItem.image} 
+                      className="w-full h-full object-cover group-hover/next:scale-110 transition-transform duration-700" 
+                      alt={nextItem.title} 
+                    />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                       <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                         <Play fill="white" size={24} className="ml-1" />
+                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 justify-center">
+                    <button 
+                      onClick={() => onPlayNext?.(nextItem)}
+                      className="bg-white text-black px-8 py-3 rounded-xl font-bold hover:bg-blue-400 transition-colors"
+                    >
+                      Play Now
+                    </button>
+                    <button 
+                      onClick={() => setIsCountingDown(false)}
+                      className="bg-white/10 hover:bg-white/20 px-8 py-3 rounded-xl font-bold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Controls Overlay */}
           <motion.div
-            animate={{ opacity: showControls ? 1 : 0 }}
+            animate={{ opacity: showControls && !isCountingDown ? 1 : 0 }}
             className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 flex flex-col justify-between p-8"
           >
             {/* Header */}
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-bold font-display">{videoTitle || "Big Buck Bunny"}</h3>
-                <p className="text-xs text-white/40 uppercase tracking-widest font-black mt-1">Ogle Premium Stream</p>
+                <p className="text-xs text-white/40 uppercase tracking-widest font-black mt-1">Do Premium Stream</p>
               </div>
               <button 
                 onClick={onClose}
@@ -244,7 +356,7 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
 
             {/* Middle Big Buttons (Visible only when hovering or paused) */}
             <div className="flex-1 flex items-center justify-center gap-12">
-               {!isPlaying && (
+               {!isPlaying && !isCountingDown && (
                  <motion.button
                    initial={{ scale: 0.8 }}
                    animate={{ scale: 1 }}
@@ -304,6 +416,16 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
                 </div>
 
                 <div className="flex items-center gap-6 relative">
+                  {isAirPlayAvailable && (
+                    <button 
+                      onClick={handleAirPlay}
+                      className="text-white/60 hover:text-blue-400 transition-colors"
+                      title="AirPlay"
+                    >
+                      <Airplay size={22} />
+                    </button>
+                  )}
+
                   <button 
                     onClick={() => setShowSubtitles(!showSubtitles)}
                     className={cn(
@@ -330,9 +452,30 @@ export default function VideoPlayer({ isOpen, onClose, videoTitle, videoUrl }: V
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
-                          className="absolute bottom-full right-0 mb-4 bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl min-w-[140px] py-2"
+                          className="absolute bottom-full right-0 mb-4 bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl min-w-[180px] py-2"
                         >
                           <div className="px-4 py-2 text-[10px] uppercase font-black text-white/30 tracking-widest border-b border-white/5">
+                            Settings
+                          </div>
+                          
+                          {/* Auto-Play Toggle */}
+                          <div className="px-4 py-3 flex items-center justify-between border-b border-white/5">
+                            <span className="text-xs font-bold text-white/60">Auto-play</span>
+                            <button 
+                              onClick={() => setIsAutoPlayEnabled(!isAutoPlayEnabled)}
+                              className={cn(
+                                "w-10 h-5 rounded-full transition-colors relative",
+                                isAutoPlayEnabled ? "bg-blue-500" : "bg-white/10"
+                              )}
+                            >
+                              <motion.div 
+                                animate={{ x: isAutoPlayEnabled ? 22 : 2 }}
+                                className="absolute top-1 left-1 w-3 h-3 bg-white rounded-full"
+                              />
+                            </button>
+                          </div>
+
+                          <div className="px-4 py-2 text-[10px] uppercase font-black text-white/30 tracking-widest bg-white/5">
                             Playback Speed
                           </div>
                           {SPEEDS.map(speed => (

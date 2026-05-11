@@ -140,7 +140,7 @@ export default function LiveGuide() {
                     <Info size={20} />
                   </div>
                   <p className="text-xs text-white/50 leading-relaxed italic">
-                    Reminders will send a push notification to your Ogle TV and linked mobile devices 5 minutes before the show starts.
+                    Reminders will send a push notification to your DoTv and linked mobile devices 5 minutes before the show starts.
                   </p>
                 </div>
               </div>

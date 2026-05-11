@@ -4,7 +4,7 @@ import { PRODUCTS, Product } from '../constants';
 import { useState } from 'react';
 import CheckoutModal from './CheckoutModal';
 
-export default function OgleDrop() {
+export default function DoDrop() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -14,7 +14,7 @@ export default function OgleDrop() {
   };
 
   return (
-    <section id="ogle-drop" className="py-32 bg-black relative overflow-hidden">
+    <section id="do-drop" className="py-32 bg-black relative overflow-hidden">
       {/* Decorative elements */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/10 blur-[150px] -z-10" />
       
@@ -25,7 +25,7 @@ export default function OgleDrop() {
               Exclusive Hardware
             </div>
             <h2 className="text-4xl md:text-7xl font-bold font-display tracking-tighter leading-[0.9]">
-              OGLE <span className="text-blue-500">DROP</span>
+              DO <span className="text-blue-500">DROP</span>
             </h2>
             <p className="text-xl text-white/50 mt-6 leading-relaxed">
               Express checkout for premium hardware. Delivered to your door.

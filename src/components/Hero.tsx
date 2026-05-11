@@ -5,9 +5,10 @@ import { FEATURED_CONTENT } from '../constants';
 
 interface HeroProps {
   onPlay?: (item: any) => void;
+  onDetails?: (item: any) => void;
 }
 
-export default function Hero({ onPlay }: HeroProps) {
+export default function Hero({ onPlay, onDetails }: HeroProps) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -64,11 +65,11 @@ export default function Hero({ onPlay }: HeroProps) {
                     Watch Now
                   </button>
                   <button 
-                    onClick={() => onPlay?.(current)}
+                    onClick={() => onDetails?.(current)}
                     className="bg-white/5 backdrop-blur-xl text-white border border-white/10 px-10 py-4 rounded-2xl font-black flex items-center gap-3 hover:bg-white/10 transition-all transform hover:scale-105 active:scale-95 uppercase tracking-widest text-xs"
                   >
-                    <Youtube size={18} className="text-red-500" />
-                    Play Trailer
+                    <Info size={18} />
+                    More Info
                   </button>
                 </div>
               </motion.div>

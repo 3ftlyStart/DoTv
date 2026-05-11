@@ -9,63 +9,97 @@ import Partners from './components/Partners';
 import ContentSection from './components/ContentSection';
 import LiveGuide from './components/LiveGuide';
 import Features from './components/Features';
-import OgleDrop from './components/OgleDrop';
+import DoDrop from './components/DoDrop';
 import Footer from './components/Footer';
+import MovieDetails from './components/MovieDetails';
 import { RECOMMENDATIONS } from './constants';
 import { useWatchlist } from './lib/useWatchlist';
 import { useHistory } from './lib/useHistory';
 import { useRatings } from './lib/useRatings';
 import { getPersonalizedRecommendations } from './lib/recommendationEngine';
 
-import { useProfiles } from './lib/useProfiles';
-import ProfileSelection from './components/ProfileSelection';
 import SearchOverlay from './components/SearchOverlay';
 import VideoPlayer from './components/VideoPlayer';
 import { useState, useMemo } from 'react';
 
 export default function App() {
-  const { profiles, activeProfile, selectProfile } = useProfiles();
-  const { watchlist } = useWatchlist(activeProfile?.id);
-  const { history, addToHistory } = useHistory(activeProfile?.id);
-  const { ratings } = useRatings(activeProfile?.id);
+  const profileId = 'default';
+  const { watchlist } = useWatchlist(profileId);
+  const { history, addToHistory } = useHistory(profileId);
+  const { ratings } = useRatings(profileId);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
+  const [selectedMovie, setSelectedMovie] = useState<any | null>(null);
 
   const handlePlayContent = (item: any) => {
     setActiveVideo(item);
     addToHistory(item);
+    setSelectedMovie(null); // Close details when playing
+  };
+
+  const handleContentClick = (item: any) => {
+    setSelectedMovie(item);
   };
 
   const personalizedRecommendations = useMemo(() => {
     return getPersonalizedRecommendations(watchlist, history, ratings);
   }, [watchlist, history, ratings]);
 
-  if (!activeProfile) {
-    return <ProfileSelection profiles={profiles} onSelect={selectProfile} />;
-  }
+  const nextItem = useMemo(() => {
+    if (!activeVideo) return null;
+    
+    // First check continue watching (history)
+    const historyIndex = history.findIndex(item => item.id === activeVideo.id);
+    if (historyIndex !== -1 && historyIndex < history.length - 1) {
+      return history[historyIndex + 1];
+    }
+    
+    // Then check recommendations
+    const recommendations = personalizedRecommendations.length > 0 ? personalizedRecommendations : RECOMMENDATIONS;
+    const recIndex = recommendations.findIndex(item => item.id === activeVideo.id);
+    
+    if (recIndex !== -1 && recIndex < recommendations.length - 1) {
+      return recommendations[recIndex + 1];
+    } else {
+      // Return first recommendation if we're at the end or if not in list
+      return recommendations[0].id === activeVideo.id ? recommendations[1] : recommendations[0];
+    }
+  }, [activeVideo, history, personalizedRecommendations]);
 
   return (
     <div className="min-h-screen bg-[#050505]">
       <Navbar 
-        activeProfile={activeProfile} 
-        onSwitchProfile={() => selectProfile(null)} 
         onSearch={() => setIsSearchOpen(true)}
       />
       
       <SearchOverlay 
         isOpen={isSearchOpen} 
         onClose={() => setIsSearchOpen(false)} 
-        onItemClick={handlePlayContent}
+        onItemClick={handleContentClick}
       />
 
       <VideoPlayer
         isOpen={!!activeVideo}
         onClose={() => setActiveVideo(null)}
         videoTitle={activeVideo?.title}
+        videoUrl={activeVideo?.videoUrl}
+        nextItem={nextItem}
+        onPlayNext={handlePlayContent}
+      />
+
+      <MovieDetails 
+        movie={selectedMovie}
+        isOpen={!!selectedMovie}
+        onClose={() => setSelectedMovie(null)}
+        onPlay={handlePlayContent}
+        profileId={profileId}
       />
       
       <main>
-        <Hero onPlay={handlePlayContent} />
+        <Hero 
+          onPlay={handlePlayContent} 
+          onDetails={handleContentClick} 
+        />
         
         <Partners />
         
@@ -75,12 +109,12 @@ export default function App() {
           
           {watchlist.length > 0 && (
             <ContentSection 
-              title={`${activeProfile.name}'s Watchlist`} 
+              title="My Watchlist" 
               items={watchlist} 
               variant="poster"
               id="watchlist"
-              profileId={activeProfile.id}
-              onItemClick={handlePlayContent}
+              profileId={profileId}
+              onItemClick={handleContentClick}
             />
           )}
 
@@ -89,22 +123,22 @@ export default function App() {
             title="Continue Watching" 
             items={history.length > 0 ? history : RECOMMENDATIONS.slice(0, 4)} 
             variant="thumbnail" 
-            profileId={activeProfile.id}
-            onItemClick={handlePlayContent}
+            profileId={profileId}
+            onItemClick={handleContentClick}
           />
           
           <ContentSection 
             title={history.length > 0 || watchlist.length > 0 ? "Picked for You" : "Recommended for you"} 
             items={personalizedRecommendations.length > 0 ? personalizedRecommendations : RECOMMENDATIONS} 
             variant="poster" 
-            profileId={activeProfile.id}
-            onItemClick={handlePlayContent}
+            profileId={profileId}
+            onItemClick={handleContentClick}
           />
 
           <LiveGuide />
         </div>
 
-        <OgleDrop />
+        <DoDrop />
 
         <Features />
 
@@ -128,7 +162,7 @@ export default function App() {
           
           <div className="mt-20 text-center">
             <div className="text-[10px] text-white/20 uppercase tracking-[0.4em] font-black pointer-events-none">
-              Powered by Ogle OS v4.2
+              Powered by Do OS v4.2
             </div>
           </div>
         </section>
